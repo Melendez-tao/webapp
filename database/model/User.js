@@ -1,6 +1,13 @@
 const {Sequelize,sequelize} = require('../init')
 
 const User = sequelize.define('users',{
+    user_id:{
+      type:Sequelize.UUID,
+        allowNull:false,
+        primaryKey:true,
+        defaultValue:Sequelize.UUIDV1,
+        unique:true
+    },
     lastname:{
         type: Sequelize.STRING,
         validate:{

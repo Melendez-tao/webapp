@@ -1,11 +1,10 @@
 const express = require('express')
 const User = require('../database/model/User')
 const  bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
 const router = express.Router();
 
 //create
-router.post('/create',async (req,res) => {
+router.post('',async (req,res) => {
     // res.json(req.body);
     const lastname = req.body.lastname;
     const firstname = req.body.firstname;
@@ -19,15 +18,18 @@ router.post('/create',async (req,res) => {
         return res.send({msg:'password is too simple, please type another one!'})
     }else
      user = await User.create({lastname,firstname,password: bcrypt.hashSync(password ),username})
-res.status(200);
+    res.status(200)
     delete user.dataValues.password;
     console.log(user.dataValues);
     res.json(user.dataValues);
 })
 //get info
 router.get('/self',async(req,res) => {
-    const password = req.body.password;
-    const username = req.body.username;
+    const token = String(req.headers.authorization).split(' ').pop();
+    const userNamePassword = new Buffer.from(token,'base64').toString();
+    const temp = userNamePassword.split(":")
+    const password = temp[1];
+    const username = temp[0];
     const model = await User.findOne({where:{username}})
     if(!model){
         res.status(400);
@@ -36,41 +38,45 @@ router.get('/self',async(req,res) => {
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
         if(!passwordValid)
             return res.send({msg:'wrong password'})
-
-        const token = jwt.sign({username},"wttztt")
-        console.log(token);
         delete model.dataValues.password;
         res.json(model);
     }
 })
 // verify
-router.get('/auth',async(req,res) => {
-    const token = String(req.headers.authorization).split(' ').pop()
-    if(!token)
-        return res.send({msg:'no token'})
-    const {username} = jwt.verify(token,"wttztt")
-    const model = await User.findOne({where:{username}})
-    if(!model){
-        return res.send({msg : 'no this account'})
-    }
-    return res.send({msg:'token verified!'})
-})
-//update
-router.put('/update',async(req,res) =>{
-    const lastname = req.body.lastname;
-    const firstname = req.body.firstname;
-    const password = req.body.password;
-    const username = req.body.username;
-    const model = await User.findOne({where:{lastname}})
+router.get('/:id',async(req,res) => {
+        const user_id = req.params.id;
+        const model = await User.findOne({where:{user_id}})
     if(!model){
         res.status(400);
-        return res.send({msg : 'no this account'})
+        return res.send({msg:'no such user'})
+    }else {
+        delete model.dataValues.password;
+        res.json(model);
+    }
+})
+//update
+router.put('/self',async(req,res) =>{
+    const token = String(req.headers.authorization).split(' ').pop();
+    const userNamePassword = new Buffer.from(token,'base64').toString();
+    const temp = userNamePassword.split(":")
+    const password = temp[1];
+    const username = temp[0];
+    const lastname = req.body.lastname;
+    const firstname = req.body.firstname;
+    const updatePassword = req.body.password;
+    const model = await User.findOne({where:{username}})
+    if(!model){
+        res.status(400);
+        return res.send({msg : 'no such account'})
     }else{
-        if(model.dataValues.username != username){
+        const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
+        if(!passwordValid)
+            return res.send({msg:'wrong password'})
+        if(req.body.username){
             res.status(400);
             return res.send({msg:'cant change username'})
         }
-            user = await model.update({lastname,firstname,password: bcrypt.hashSync(password)})
+            user = await model.update({lastname,firstname,password: bcrypt.hashSync(updatePassword)})
             console.log("update successfully")
             delete user.dataValues.password;
             res.json(user.dataValues);
