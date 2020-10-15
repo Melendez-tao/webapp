@@ -14,7 +14,7 @@ router.post('',async (req,res) => {
     if(model){
         res.status(400);
         return res.send({msg:'email has been resgistered'})
-    }else if(password.length < 8 || !judge(password)){
+    }else if(password.length < 8 || !router.judge(password)){
         return res.send({msg:'password is too simple, please type another one!'})
     }else
      user = await User.create({lastname,firstname,password: bcrypt.hashSync(password ),username})
@@ -83,7 +83,7 @@ router.put('/self',async(req,res) =>{
         }
 })
 // check password
-    function judge(password){
+    router.judge = (password) => {
     let numOfNumber = 0;
     let numOfChar = 0;
     for(let i = 0; i < password.length;i++ ){
