@@ -19,3 +19,4 @@ app.use('/v1/user',router)
 app.listen(3000,() => {
     console.log('serve is running on 3000');
 })
+module.exports = app;

@@ -38,8 +38,8 @@ const User = sequelize.define('users',{
     }
 })
 
-User.sync().then(() => {
-    console.log('user model has been synchronized');
-});
+// User.sync().then(() => {
+//     console.log('user model has been synchronized');
+// });
 
 module.exports = User

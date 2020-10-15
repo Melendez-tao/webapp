@@ -20,8 +20,8 @@ const Answer = sequelize.define('answers',{
     }
 })
 
-Answer.sync().then(() => {
-    console.log('answer model has been synchronized');
-});
+// Answer.sync().then(() => {
+//     console.log('answer model has been synchronized');
+// });
 
 module.exports = Answer
