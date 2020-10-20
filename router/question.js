@@ -9,7 +9,10 @@ const  bcrypt = require('bcryptjs')
 const router = express.Router();
 //post questions
 router.post('',async(req,res) => {
-    const token = String(req.headers.authorization).split(' ').pop();
+    const auth = req.headers.authorization;
+    if(auth == undefined)
+        res.send({msg:"No Authorization, you can't post question"})
+    const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
     const username = temp[0];
@@ -54,7 +57,10 @@ router.post('',async(req,res) => {
 })
 //delete questions
 router.delete('/:id',async(req,res) => {
-    const token = String(req.headers.authorization).split(' ').pop();
+    const auth = req.headers.authorization;
+    if(auth == undefined)
+        res.send({msg:"No Authorization, you can't delete question"})
+    const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
     const username = temp[0];
@@ -71,17 +77,26 @@ router.delete('/:id',async(req,res) => {
     const user_id = model.dataValues.user_id;
     const question_id = req.params.id;
     const question = await Question.findOne({where:{question_id}});
+    if(!question)
+        res.send({
+            msg:"no such question!"
+        })
+    const answers = await Answer.findAll({where:{question_id}})
     if(user_id != question.dataValues.user_id){
         res.send({msg:'This question is not posted by you, you can not delete it'})
+    }else if(answers.length != 0) {
+        res.send({msg: "Someone answered this question, you can't delete it!"})
     }else{
-    const question = await Question.destroy({where:{question_id}});
-    res.send({msg:'delete successfully!'})
+        const question = await Question.destroy({where:{question_id}});
+        res.send({msg:'delete successfully!'})
     }
 })
 
 router.put('/:id',async(req,res) => {
-
-    const token = String(req.headers.authorization).split(' ').pop();
+    const auth = req.headers.authorization;
+    if(auth == undefined)
+        res.send({msg:"No Authorization, you can't update question"})
+    const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
     const username = temp[0];
@@ -98,6 +113,8 @@ router.put('/:id',async(req,res) => {
     const user_id = model.dataValues.user_id;
     const question_id = req.params.id;
     const question = await Question.findOne({where:{question_id}});
+    if(!question)
+        res.send({msg:"no such question"})
     if(user_id != question.dataValues.user_id){
         res.send({msg:'This question is not posted by you, you can not udpate it'})
     }else{
@@ -134,7 +151,10 @@ router.put('/:id',async(req,res) => {
 })
 //post answers
 router.post('/:id/answer',async(req,res) => {
-    const token = String(req.headers.authorization).split(' ').pop();
+    const auth = req.headers.authorization;
+    if(auth == undefined)
+        res.send({msg:"No Authorization, you can't post answers"})
+    const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
     const username = temp[0];
@@ -157,7 +177,10 @@ router.post('/:id/answer',async(req,res) => {
 })
 //delete answers
 router.delete('/:qid/answer/:aid',async(req,res) => {
-    const token = String(req.headers.authorization).split(' ').pop();
+    const auth = req.headers.authorization;
+    if(auth == undefined)
+        res.send({msg:"no authorization, you can't delete question"})
+    const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
     const username = temp[0];
@@ -173,17 +196,19 @@ router.delete('/:qid/answer/:aid',async(req,res) => {
     }
     const user_id = model.dataValues.user_id;
     const answer_id = req.params.aid;
-    console.log(answer_id);
     const answer = await Answer.findOne({where:{answer_id}});
     if(user_id != answer.dataValues.user_id){
         res.send({msg:'This answer is not posted by you, you can not delete it'})
     }else{
-        Question.destroy({where:{answer_id}});
+        Answer.destroy({where:{answer_id}});
         res.send({msg:'delete successfully!'})
     }
 })
 router.put('/:qid/answer/:aid',async(req,res) => {
-    const token = String(req.headers.authorization).split(' ').pop();
+    const auth = req.headers.authorization;
+    if(auth == undefined)
+        res.send({msg:"No Authorization,You can't update this answer"})
+    const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
     const username = temp[0];
@@ -214,12 +239,19 @@ router.put('/:qid/answer/:aid',async(req,res) => {
 router.get('/:qid/answer/:aid',async(req,res) => {
         const answer_id = req.params.aid;
         const answer = await Answer.findOne({where:{answer_id}})
+        if(!answer)
+            res.send({
+                msg:"no such answer"
+            })
         res.json(answer.dataValues);
 })
 //get question with id without auth
 router.get('/:id',async(req,res) =>{
     const question_id = req.params.id;
     const question = await Question.findOne({where:{question_id}})
+    if(!question){
+        res.send({msg:"no such question"})
+    }
     const relation = await Relation.findAll({where:{question_id}})
     for(let i = 0 ; i < relation.length;i++){
         const category_id = relation[i].dataValues.category_id;

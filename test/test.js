@@ -1,5 +1,5 @@
 const router = require('../router/user')
-describe('password ', function() {
+describe('password validation', function() {
     it('validation', function(done) {
         const password = "888555w"
         if(router.judge(password) == false){
