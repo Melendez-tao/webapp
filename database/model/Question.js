@@ -18,8 +18,8 @@ const Question = sequelize.define('questions',{
     }
 })
 
-// Question.sync().then(() => {
-//     console.log('question model has been synchronized');
-// });
+Question.sync().then(() => {
+    console.log('question model has been synchronized');
+});
 
 module.exports = Question

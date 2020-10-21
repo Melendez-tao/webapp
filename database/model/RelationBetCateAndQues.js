@@ -7,8 +7,8 @@ const  Relation = sequelize.define('relationOFQAndC',{
         type:Sequelize.UUID
     }
 })
-// Relation.sync().then(() => {
-//     console.log('Relation model has been synchronized');
-// });
+Relation.sync().then(() => {
+    console.log('Relation model has been synchronized');
+});
 
 module.exports = Relation

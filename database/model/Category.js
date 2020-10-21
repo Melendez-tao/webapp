@@ -13,8 +13,8 @@ const  Category = sequelize.define('categories',{
         type:Sequelize.STRING
     }
 })
-// Category.sync().then(() => {
-//     console.log('category model has been synchronized');
-// });
+Category.sync().then(() => {
+    console.log('category model has been synchronized');
+});
 
 module.exports = Category
