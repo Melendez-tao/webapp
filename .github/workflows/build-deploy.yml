@@ -1,0 +1,42 @@
+name: Build and Deploy WebApp
+
+env:
+  ARTIFACT_NAME: csye6225-webapp-${{github.run_number}}.zip
+  CODEDEPLOY_APPLICATION_NAME: csye6225-webapp
+  CODEDEPLOY_APPLICATION_DEPLOYMENT_GROUP_NAME: csye6225-webapp-deployment
+  AWS_REGION: us-east-1
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  ci_cd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.16.1'
+
+      - name: Build Deployment Artifact
+        run: |
+          mkdir codedeploy_artifact
+          zip -r ${{env.ARTIFACT_NAME}} codedeploy/*.sh appspec.yml .env database/ router/ app.js package.json
+          mv ${{env.ARTIFACT_NAME}} codedeploy_artifact
+          cd codedeploy_artifact
+          ls
+          cd ..
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: AKIAWZPJ4XP5GML6W6JG
+          aws-secret-access-key: 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
+          aws-region: us-east-1
+
+
