@@ -1,5 +1,4 @@
 #!/bin/bash
-cd /var/webapp
-npm install
-npm uninstall nodemon
-sudo npm install -g --force nodemon
+sudo cd /var/webapp
+sudo npm install
+sudo npm install express
