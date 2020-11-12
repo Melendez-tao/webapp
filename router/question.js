@@ -88,7 +88,7 @@ router.post('',async(req,res) => {
     timer.stop();
     res.json(question.dataValues);
 })
-
+// attach file to question
 router.post('/:id/file',upload, async (req,res) => {
     let timer = metrics.createTimer('attach file to question api')
     const auth = req.headers.authorization;
@@ -148,6 +148,7 @@ router.post('/:id/file',upload, async (req,res) => {
         })
         console.log(typeof s3_object_name)
         let createFTimer = metrics.createTimer('execution of create file ')
+        logger.info('attach file to question')
         const file = await File.create({file_name,s3_object_name})
         createFTimer.stop();
         delete file.dataValues.updatedAt;
@@ -208,7 +209,7 @@ router.delete('/:id/file/:fid',async (req,res) => {
                 deleteTimer.stop();
                 metrics.increment('delete file of question api', 1.0)
                 res.status(200).send("delete successfully");
-                logger.info('delete file successfully')
+                logger.info('delete file of question successfully')
             }
         })
         let deletFTimer = metrics.createTimer('execution of delete file')
@@ -420,7 +421,7 @@ router.post('/:qid/answer/:aid/file',upload,async(req,res) => {
             }
         })
         const file =  await File.create({file_name,s3_object_name})
-        logger.info('attach file to question')
+        logger.info('attach file to answer')
         delete file.dataValues.updatedAt;
         imageArray[imageArray.length] = file.dataValues;
         const file_id = file.dataValues.file_id;
@@ -483,7 +484,7 @@ router.delete('/:qid/answer/:aid/file/:fid',async(req,res) => {
             deleteFTimer.stop();
             metrics.increment('delete file of question api', 1.0)
             res.status(200).send("delete successfully from bucket")
-            logger.info('delete file successfully')
+            logger.info('delete file of answer successfully')
         }
     })
 
