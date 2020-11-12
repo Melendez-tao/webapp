@@ -1,8 +1,9 @@
 const express = require('express')
 const User = require('../database/model/User')
 const  bcrypt = require('bcryptjs')
+const lynx = require('lynx')
 const router = express.Router();
-
+var metrics = new lynx('')
 //create
 router.post('',async (req,res) => {
     // res.json(req.body);

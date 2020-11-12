@@ -21,8 +21,8 @@ const storage = multer.memoryStorage({
 })
 const upload = multer({storage}).array('image',10)
 const s3 = new AWS.S3({
-    accessKeyId:process.env.AWS_ID,
-    secretAccessKey: process.env.AWS_SECRET
+    accessKeyId:process.env.DEV_AWS_ID,
+    secretAccessKey: process.env.DEV_AWS_SECRET
 })
 //post questions
 router.post('',async(req,res) => {
