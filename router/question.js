@@ -32,7 +32,7 @@ router.post('',async(req,res) => {
     let timer = metrics.createTimer('post question api')
     const auth = req.headers.authorization;
     if(auth == undefined){
-        logger.error('no authoriztion')
+        res.status(403)
         res.send({msg:"No Authorization, you can't post question"})
     }
     const token = String(auth).split(' ').pop();
@@ -98,7 +98,6 @@ router.post('/:id/file',upload, async (req,res) => {
     if(auth == undefined){
         res.status(403);
         res.send({msg:"No Authorization, you can't delete question"})
-        logger.error('No Authorization, you can not  delete question')
     }
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
@@ -224,7 +223,7 @@ router.delete('/:id',async(req,res) => {
     let timer = metrics.createTimer('delete question api')
     const auth = req.headers.authorization;
     if(auth == undefined){
-        logger.error('no auth')
+        res.status(403)
         res.send({msg:"No Authorization, you can't delete question"})
 
     }
@@ -330,8 +329,8 @@ router.post('/:id/answer',async(req,res) => {
     let timer  = metrics.createTimer('post answer api')
     const auth = req.headers.authorization;
     if(auth == undefined) {
+        res.status(403)
         res.send({msg:"No Authorization, you can't post answers"})
-        logger.error('no auth')
     }
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
