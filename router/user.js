@@ -3,10 +3,13 @@ const User = require('../database/model/User')
 const  bcrypt = require('bcryptjs')
 const lynx = require('lynx')
 const router = express.Router();
+const logger = require('../log')
+var metrics = new lynx('54.89.237.139',8125)
 var metrics = new lynx('')
 //create
 router.post('',async (req,res) => {
     // res.json(req.body);
+    const timer =  metrics.createTimer('post user Api')
     const lastname = req.body.lastname;
     const firstname = req.body.firstname;
     const password = req.body.password;
@@ -14,15 +17,20 @@ router.post('',async (req,res) => {
     const model = await User.findOne({where:{username}})
     if(model){
         res.status(400);
+        logger.error('email has been resgistered')
         return res.send({msg:'email has been resgistered'})
     }else if(password.length < 8 || !router.judge(password)){
         return res.send({msg:'password is too simple, please type another one!'})
     }else
+         userTimer = metrics.createTimer('create User execution')
      user = await User.create({lastname,firstname,password: bcrypt.hashSync(password ),username})
+        userTimer.stop();
     res.status(200)
     delete user.dataValues.password;
     console.log(user.dataValues);
     res.json(user.dataValues);
+    timer.stop();
+    metrics.increment('post user api', 0.1)
 })
 //get info
 router.get('/self',async(req,res) => {

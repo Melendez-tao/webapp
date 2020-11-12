@@ -1,16 +1,23 @@
-const log = require('winston');
-
-const logger = log.createLogger({
-    level: 'info',
-    format: log.format.combine(log.format.timestamp(),log.format.json()),
-    transports: [
-        new log.transports.File({filename: '/var/log/webapp.log'}),
-        new log.transports.Console()
-    ]
+const { createLogger, format, transports:wt } = require('winston');
+const { combine, timestamp, printf } = format
+const myformat = printf(({ level, message, timestamp}) => {
+    return `${timestamp} - ${level}: ${message}`;
 });
-if (process.env.NODE_ENV !== 'production') {
-    logger.add(new log.transports.Console({
-        format: log.format.simple(),
-    }));
+const transports = [
+    new wt.File({ filename: '/var/log/error.log', level: 'error'}),
+    new wt.File({ filename: '/var/log/info.log', level: 'info'}),
+    new wt.File({ filename: '/var/log/http.log'})
+];
+if (!process.env.NODE_ENV) {
+    transports.push(new wt.Console());
 }
+const logger = createLogger({
+    level: 'http',
+    format: combine(
+        timestamp(),
+        myformat
+    ),
+    transports
+});
+
 module.exports = logger;
