@@ -10,9 +10,11 @@ const logger = require('../log')
 const AWS = require('aws-sdk')
 const multer = require('multer')
 const uuid = require('uuid')
+const lynx = require('lynx')
 const QAF = require('../database/model/RelationBetQAndFile')
 const AAF = require('../database/model/RelationBetAandFile')
 require('dotenv/config')
+var metrics = new lynx('localhost',8125)
 // const  bcrypt = require('bcryptjs')
 const router = express.Router();
 const storage = multer.memoryStorage({
@@ -27,6 +29,7 @@ const s3 = new AWS.S3({
 })
 //post questions
 router.post('',async(req,res) => {
+    let timer = metrics.createTimer('post question api')
     const auth = req.headers.authorization;
     if(auth == undefined)
         logger.error('no authoriztion')
@@ -50,8 +53,9 @@ router.post('',async(req,res) => {
     }
     const user_id = model.dataValues.user_id;
     const question_text = req.body.question_text;
-
+    let createQTimer = metrics.createTimer('create question execution')
     const question = await Question.create({user_id,question_text})
+    createQTimer.stop();
     logger.info('post question successfully')
     const question_id = question.dataValues.question_id;
     const categories = req.body.categories;
@@ -78,10 +82,13 @@ router.post('',async(req,res) => {
     const answers = await Answer.findAll({where:{question_id}})
     question.dataValues.answers = answers;
     question.dataValues.attachments = [];
+    metrics.increment('post question api', 1.0)
+    timer.stop();
     res.json(question.dataValues);
 })
 
 router.post('/:id/file',upload, async (req,res) => {
+    let timer = metrics.createTimer('attach file to question api')
     const auth = req.headers.authorization;
     const fileArray = req.files;
     console.log(req.files);
@@ -117,6 +124,7 @@ router.post('/:id/file',upload, async (req,res) => {
     if(user_id != question.dataValues.user_id){
         res.send({msg:'This question is not posted by you, you can not post images'})
     }
+    let s3Timer = metrics.createTimer('upload file to S3 bucket')
     for(let i = 0; i < fileArray.length;i++){
         console.log(i);
         let file_name = fileArray[i].originalname;
@@ -135,13 +143,18 @@ router.post('/:id/file',upload, async (req,res) => {
             }
         })
         console.log(typeof s3_object_name)
+        let createFTimer = metrics.createTimer('execution of create file ')
         const file = await File.create({file_name,s3_object_name})
+        createFTimer.stop();
         delete file.dataValues.updatedAt;
         imageArray[imageArray.length] = file.dataValues;
         console.log(file.dataValues);
         const file_id = file.dataValues.file_id;
         QAF.create({question_id,file_id})
         if(i == fileArray.length - 1){
+            s3Timer.stop();
+            timer.stop();
+            metrics.increment('attch file to question api', 1.0)
             res.status(200).send(imageArray);
         }
     }
@@ -180,22 +193,28 @@ router.delete('/:id/file/:fid',async (req,res) => {
             Bucket: process.env.BUCKET_NAME,
             Key:key
         }
+        let deleteTimer = metrics.createTimer('delete file from S3')
         s3.deleteObject(params,function (err, data) {
             if(err){
                 res.status(400).send(err);
                 logger.error(err)
             }else{
+                deleteTimer.stop();
+                metrics.increment('delete file of question api', 1.0)
                 res.status(200).send("delete successfully");
                 logger.info('delete file successfully')
             }
         })
+        let deletFTimer = metrics.createTimer('execution of delete file')
         File.destroy({where:{file_id}})
+        deletFTimer.stop();
         QAF.destroy({where:{file_id}})
     }
 })
 
 //delete questions
 router.delete('/:id',async(req,res) => {
+    let timer = metrics.createTimer('delete question api')
     const auth = req.headers.authorization;
     if(auth == undefined)
         res.send({msg:"No Authorization, you can't delete question"})
@@ -227,7 +246,11 @@ router.delete('/:id',async(req,res) => {
         logger.error('Someone answered this question, can not delete question')
         res.send({msg: "Someone answered this question, you can't delete it!"})
     }else{
+        let deleteTimer = metrics.createTimer('delete question execution')
         const question = await Question.destroy({where:{question_id}});
+        deleteTimer.stop();
+        timer.stop();
+        metrics.increment('delete question api', 1.0)
         res.send({msg:'delete successfully!'})
         logger.info('delete question')
     }
@@ -292,6 +315,7 @@ router.put('/:id',async(req,res) => {
 })
 //post answers
 router.post('/:id/answer',async(req,res) => {
+    let timer  = metrics.createTimer('post answer api')
     const auth = req.headers.authorization;
     if(auth == undefined)
         res.send({msg:"No Authorization, you can't post answers"})
@@ -312,14 +336,19 @@ router.post('/:id/answer',async(req,res) => {
     const user_id = model.dataValues.user_id;
     const question_id = req.params.id;
     const answer_text = req.body.answer_text;
+    let createTimer = metrics.createTimer('post answer execution')
     const answer = await Answer.create({question_id,user_id,answer_text})
+    createTimer.stop();
     logger.info('post answer')
     // console.log(answer.dataValues);
     answer.dataValues.attachments = [];
+    timer.stop();
+    metrics.increment('post answer api', 1.0)
     res.json(answer.dataValues);
 })
 //post images to answer
 router.post('/:qid/answer/:aid/file',upload,async(req,res) => {
+    let timer = metrics.createTimer('attach file to answer')
     const auth = req.headers.authorization;
     const fileArray = req.files;
     console.log(auth);
@@ -354,6 +383,9 @@ router.post('/:qid/answer/:aid/file',upload,async(req,res) => {
     }
 
     let imageArray = [];
+    let uploadTimer = metrics.createTimer('upload file to S3')
+    let createFTimer = metrics.createTimer('create file execution')
+
     for(let i = 0; i < fileArray.length;i++){
         let file_name = fileArray[i].originalname;
         const s3_object_name = uuid.v4() + file_name;
@@ -376,12 +408,17 @@ router.post('/:qid/answer/:aid/file',upload,async(req,res) => {
         AAF.create({answer_id,file_id})
         // dataArray[dataArray.length] = data
         if(i == fileArray.length - 1){
+            uploadTimer.stop();
+            createFTimer.stop();
+            timer.stop();
+            metrics.increment('attach file to answer api', 1.0)
             res.status(200).send(imageArray);
         }
     }
 })
 //delete file of answers
 router.delete('/:qid/answer/:aid/file/:fid',async(req,res) => {
+    let timer = metrics.createTimer('delete file of answer api')
     const auth = req.headers.authorization;
     if(auth == undefined)
         res.send({msg:"no authorization, you can't delete images"})
@@ -409,20 +446,28 @@ router.delete('/:qid/answer/:aid/file/:fid',async(req,res) => {
         Bucket: process.env.BUCKET_NAME,
         Key: key
     }
+    let deleteS3Timer = metrics.createTimer('delete file from S3')
     s3.deleteObject(params,function (err, data) {
         if(err){
             res.status(400).send(err)
             logger.error(err)
         }else{
+            deleteS3Timer.stop();
+            timer.stop();
+            let deleteFTimer = metrics.createTimer('delete file execution')
+            File.destroy({where:{file_id}})
+            deleteFTimer.stop();
+            metrics.increment('delete file of question api', 1.0)
             res.status(200).send("delete successfully from bucket")
             logger.info('delete file successfully')
         }
     })
-    File.destroy({where:{file_id}})
+
     AAF.destroy({where:{file_id}})
 })
 //delete answers
 router.delete('/:qid/answer/:aid',async(req,res) => {
+    let timer = metrics.createTimer('delete answer api')
     const auth = req.headers.authorization;
     if(auth == undefined){
         res.status(403)
@@ -451,8 +496,12 @@ router.delete('/:qid/answer/:aid',async(req,res) => {
         res.send({msg:'This answer is not posted by you, you can not delete it'})
         logger.error('This answer is not posted by you, you can not delete it')
     }else{
+        let deleteTimer = metrics.createTimer('delete file of answer execution ')
         Answer.destroy({where:{answer_id}});
+        deleteTimer.stop();
         logger.info('delete answer')
+        timer.stop();
+        metrics.increment('delete answer api', 1.0)
         res.send({msg:'delete successfully!'})
     }
 })
@@ -542,7 +591,10 @@ router.get('/:id',async(req,res) =>{
 })
 //get all question
 router.get('',async(req,res) => {
+    let timer = metrics.createTimer('get all question api')
+    let getTimer = metrics.createTimer('get all question execution')
     const questions = await Question.findAll();
+    getTimer.stop();
     for(let i = 0;i < questions.length;i++){
         const question_id = questions[i].dataValues.question_id;
         const question = await Question.findOne({where:{question_id}})
@@ -576,6 +628,8 @@ router.get('',async(req,res) => {
         questions[i] = question.dataValues;
     }
     logger.info('get all questions')
+    timer.stop();
+    metrics.increment('get all questions api', 1.0)
     res.json(questions);
 })
 module.exports = router
