@@ -31,9 +31,10 @@ const s3 = new AWS.S3({
 router.post('',async(req,res) => {
     let timer = metrics.createTimer('post question api')
     const auth = req.headers.authorization;
-    if(auth == undefined)
+    if(auth == undefined){
         logger.error('no authoriztion')
         res.send({msg:"No Authorization, you can't post question"})
+    }
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
@@ -46,10 +47,11 @@ router.post('',async(req,res) => {
         return res.send({msg : 'no such account'})
     }else{
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
-        if(!passwordValid)
+        if(!passwordValid){
             res.status(400);
             logger.error('wrong password')
             return res.send({msg:'wrong password'})
+        }
     }
     const user_id = model.dataValues.user_id;
     const question_text = req.body.question_text;
@@ -113,15 +115,18 @@ router.post('/:id/file',upload, async (req,res) => {
         if(!passwordValid){
             res.status(400)
             logger.error('wrong password when create file to question')
-           res.send({msg:'wrong password'})
+            res.send({msg:'wrong password'})
         }
     }
     const user_id = model.dataValues.user_id;
     const question_id = req.params.id;
     const question = await Question.findOne({where:{question_id}});
-    if(!question)
+    if(!question){
+        logger.error('no such question!')
         res.send({msg:"no such question!"})
+    }
     if(user_id != question.dataValues.user_id){
+        logger.error('wrong user, can not post images')
         res.send({msg:'This question is not posted by you, you can not post images'})
     }
     let s3Timer = metrics.createTimer('upload file to S3 bucket')
@@ -164,6 +169,7 @@ router.delete('/:id/file/:fid',async (req,res) => {
     const auth = req.headers.authorization;
     if(auth == undefined){
         res.status(403);
+        logger.error('no auth')
         res.send({msg:"No Authorization, you can't delete this image"})
     }
     const token = String(auth).split(' ').pop();
@@ -179,6 +185,7 @@ router.delete('/:id/file/:fid',async (req,res) => {
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
         if(!passwordValid){
             res.status(400)
+            logger.error('wrong password')
             res.send({msg:'wrong password'})
         }
     }
@@ -216,8 +223,11 @@ router.delete('/:id/file/:fid',async (req,res) => {
 router.delete('/:id',async(req,res) => {
     let timer = metrics.createTimer('delete question api')
     const auth = req.headers.authorization;
-    if(auth == undefined)
+    if(auth == undefined){
+        logger.error('no auth')
         res.send({msg:"No Authorization, you can't delete question"})
+
+    }
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
@@ -229,8 +239,10 @@ router.delete('/:id',async(req,res) => {
         return res.send({msg : 'no such account'})
     }else{
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
-        if(!passwordValid)
+        if(!passwordValid) {
             return res.send({msg:'wrong password'})
+            logger.error('wrong password')
+        }
     }
     const user_id = model.dataValues.user_id;
     const question_id = req.params.id;
@@ -317,8 +329,10 @@ router.put('/:id',async(req,res) => {
 router.post('/:id/answer',async(req,res) => {
     let timer  = metrics.createTimer('post answer api')
     const auth = req.headers.authorization;
-    if(auth == undefined)
+    if(auth == undefined) {
         res.send({msg:"No Authorization, you can't post answers"})
+        logger.error('no auth')
+    }
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
@@ -327,11 +341,14 @@ router.post('/:id/answer',async(req,res) => {
     const model = await User.findOne({where:{username}})
     if(!model){
         res.status(400);
+        logger.error('no such account')
         return res.send({msg : 'no such account'})
     }else{
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
-        if(!passwordValid)
+        if(!passwordValid){
             return res.send({msg:'wrong password'})
+            logger.error('wrong password')
+        }
     }
     const user_id = model.dataValues.user_id;
     const question_id = req.params.id;
@@ -356,6 +373,7 @@ router.post('/:qid/answer/:aid/file',upload,async(req,res) => {
 
     if(auth == undefined) {
         res.status(403)
+        logger.error('no auth')
         res.send({msg: "no authorization, you can't post images"})
     }
     const token = String(auth).split(' ').pop();
@@ -366,11 +384,13 @@ router.post('/:qid/answer/:aid/file',upload,async(req,res) => {
     const model = await User.findOne({where:{username}});
     if(!model){
         res.status(400);
+        logger.error('no such account')
         return res.send({msg : 'no such account'})
     }else{
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
         if(!passwordValid){
             res.status(400);
+            logger.error('wrong password')
             return res.send({msg:'wrong password'})
         }
     }
@@ -420,8 +440,10 @@ router.post('/:qid/answer/:aid/file',upload,async(req,res) => {
 router.delete('/:qid/answer/:aid/file/:fid',async(req,res) => {
     let timer = metrics.createTimer('delete file of answer api')
     const auth = req.headers.authorization;
-    if(auth == undefined)
+    if(auth == undefined){
         res.send({msg:"no authorization, you can't delete images"})
+        logger.error('no auth')
+    }
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
@@ -430,11 +452,14 @@ router.delete('/:qid/answer/:aid/file/:fid',async(req,res) => {
     const model = await User.findOne({where:{username}});
     if(!model){
         res.status(400);
+        logger.error(' no such account')
         return res.send({msg : 'no such account'})
     }else{
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
-        if(!passwordValid)
+        if(!passwordValid){
             return res.send({msg:'wrong password'})
+            logger.error('wrong password')
+        }
     }
     const file_id = req.params.fid;
     const file = await File.findOne({where:{file_id}})
@@ -472,9 +497,8 @@ router.delete('/:qid/answer/:aid',async(req,res) => {
     if(auth == undefined){
         res.status(403)
         res.send({msg:"no authorization, you can't delete answer"})
+        logger.error('no auth')
     }
-    if(auth == undefined)
-        res.send({msg:"no authorization, you can't delete question"})
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
     const temp = userNamePassword.split(":")
@@ -483,11 +507,14 @@ router.delete('/:qid/answer/:aid',async(req,res) => {
     const model = await User.findOne({where:{username}});
     if(!model){
         res.status(400);
+        logger.error('no such account')
         return res.send({msg : 'no such account'})
     }else{
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
-        if(!passwordValid)
+        if(!passwordValid){
             return res.send({msg:'wrong password'})
+            logger.error('wrong password')
+        }
     }
     const user_id = model.dataValues.user_id;
     const answer_id = req.params.aid;
