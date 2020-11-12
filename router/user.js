@@ -4,8 +4,7 @@ const  bcrypt = require('bcryptjs')
 const lynx = require('lynx')
 const router = express.Router();
 const logger = require('../log')
-var metrics = new lynx('54.89.237.139',8125)
-var metrics = new lynx('')
+var metrics = new lynx('3.81.165.85',8125)
 //create
 router.post('',async (req,res) => {
     // res.json(req.body);
@@ -24,6 +23,7 @@ router.post('',async (req,res) => {
     }else
          userTimer = metrics.createTimer('create User execution')
      user = await User.create({lastname,firstname,password: bcrypt.hashSync(password ),username})
+        logger.info('create user successfully')
         userTimer.stop();
     res.status(200)
     delete user.dataValues.password;

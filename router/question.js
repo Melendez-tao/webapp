@@ -6,6 +6,7 @@ const Answer = require('../database/model/Answer')
 const Relation = require('../database/model/RelationBetCateAndQues')
 const File = require('../database/model/File')
 const  bcrypt = require('bcryptjs')
+const logger = require('../log')
 const AWS = require('aws-sdk')
 const multer = require('multer')
 const uuid = require('uuid')
@@ -28,6 +29,7 @@ const s3 = new AWS.S3({
 router.post('',async(req,res) => {
     const auth = req.headers.authorization;
     if(auth == undefined)
+        logger.error('no authoriztion')
         res.send({msg:"No Authorization, you can't post question"})
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
@@ -37,15 +39,20 @@ router.post('',async(req,res) => {
     const model = await User.findOne({where:{username}})
     if(!model){
         res.status(400);
+        logger.error('no such account')
         return res.send({msg : 'no such account'})
     }else{
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
         if(!passwordValid)
+            res.status(400);
+            logger.error('wrong password')
             return res.send({msg:'wrong password'})
     }
     const user_id = model.dataValues.user_id;
     const question_text = req.body.question_text;
+
     const question = await Question.create({user_id,question_text})
+    logger.info('post question successfully')
     const question_id = question.dataValues.question_id;
     const categories = req.body.categories;
     for(let i = 0; i < categories.length;i++){
@@ -82,6 +89,7 @@ router.post('/:id/file',upload, async (req,res) => {
     if(auth == undefined){
         res.status(403);
         res.send({msg:"No Authorization, you can't delete question"})
+        logger.error('No Authorization, you can not  delete question')
     }
     const token = String(auth).split(' ').pop();
     const userNamePassword = new Buffer.from(token,'base64').toString();
@@ -92,10 +100,12 @@ router.post('/:id/file',upload, async (req,res) => {
     if(!model){
         res.status(400);
         res.send({msg : 'no such account'})
+        logger.error('no such account when create file to question')
     }else{
         const passwordValid = bcrypt.compareSync(password,model.dataValues.password)
         if(!passwordValid){
             res.status(400)
+            logger.error('wrong password when create file to question')
            res.send({msg:'wrong password'})
         }
     }
@@ -121,6 +131,7 @@ router.post('/:id/file',upload, async (req,res) => {
         s3.upload(params,(err,data) => {
             if(err){
                 res.status(500).send(err)
+                logger.error(err);
             }
         })
         console.log(typeof s3_object_name)
@@ -172,8 +183,10 @@ router.delete('/:id/file/:fid',async (req,res) => {
         s3.deleteObject(params,function (err, data) {
             if(err){
                 res.status(400).send(err);
+                logger.error(err)
             }else{
                 res.status(200).send("delete successfully");
+                logger.info('delete file successfully')
             }
         })
         File.destroy({where:{file_id}})
@@ -211,10 +224,12 @@ router.delete('/:id',async(req,res) => {
     if(user_id != question.dataValues.user_id){
         res.send({msg:'This question is not posted by you, you can not delete it'})
     }else if(answers.length != 0) {
+        logger.error('Someone answered this question, can not delete question')
         res.send({msg: "Someone answered this question, you can't delete it!"})
     }else{
         const question = await Question.destroy({where:{question_id}});
         res.send({msg:'delete successfully!'})
+        logger.info('delete question')
     }
 })
 //update question
@@ -298,6 +313,7 @@ router.post('/:id/answer',async(req,res) => {
     const question_id = req.params.id;
     const answer_text = req.body.answer_text;
     const answer = await Answer.create({question_id,user_id,answer_text})
+    logger.info('post answer')
     // console.log(answer.dataValues);
     answer.dataValues.attachments = [];
     res.json(answer.dataValues);
@@ -349,9 +365,11 @@ router.post('/:qid/answer/:aid/file',upload,async(req,res) => {
         s3.upload(params,(err,data) => {
             if(err){
                 res.status(500).send(err)
+                logger.error(err);
             }
         })
         const file =  await File.create({file_name,s3_object_name})
+        logger.info('attach file to question')
         delete file.dataValues.updatedAt;
         imageArray[imageArray.length] = file.dataValues;
         const file_id = file.dataValues.file_id;
@@ -394,8 +412,10 @@ router.delete('/:qid/answer/:aid/file/:fid',async(req,res) => {
     s3.deleteObject(params,function (err, data) {
         if(err){
             res.status(400).send(err)
+            logger.error(err)
         }else{
             res.status(200).send("delete successfully from bucket")
+            logger.info('delete file successfully')
         }
     })
     File.destroy({where:{file_id}})
@@ -429,8 +449,10 @@ router.delete('/:qid/answer/:aid',async(req,res) => {
     const answer = await Answer.findOne({where:{answer_id}});
     if(user_id != answer.dataValues.user_id){
         res.send({msg:'This answer is not posted by you, you can not delete it'})
+        logger.error('This answer is not posted by you, you can not delete it')
     }else{
         Answer.destroy({where:{answer_id}});
+        logger.info('delete answer')
         res.send({msg:'delete successfully!'})
     }
 })
@@ -553,6 +575,7 @@ router.get('',async(req,res) => {
         question.dataValues.attachments = qaf
         questions[i] = question.dataValues;
     }
+    logger.info('get all questions')
     res.json(questions);
 })
 module.exports = router
