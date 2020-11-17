@@ -35,17 +35,17 @@ jobs:
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: AKIAWZPJ4XP5GML6W6JG
-          aws-secret-access-key: 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
+          aws-access-key-id: AKIAUQ6VGG3N25G24JMV
+          aws-secret-access-key: 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
           aws-region: us-east-1
 
       - name: Copy Artifact to S3
         run: |
-          aws s3 cp ../webapp.zip s3://${{secrets.S3_CODEDEPLOY_BUCKET}}
+          aws s3 cp ../webapp.zip s3://${{secrets.S3_PROD_CODEDEPLOY_BUCKET}}
 
       - name: CodeDeploy API call
         run: |
-          output=$(aws deploy create-deployment --application-name ${{env.CODEDEPLOY_APPLICATION_NAME}} --deployment-group-name ${{env.CODEDEPLOY_APPLICATION_DEPLOYMENT_GROUP_NAME}} --s3-location bucket=${{secrets.S3_CODEDEPLOY_BUCKET}},bundleType=zip,key=webapp.zip --region ${{env.AWS_REGION }} --output json)
+          output=$(aws deploy create-deployment --application-name ${{env.CODEDEPLOY_APPLICATION_NAME}} --deployment-group-name ${{env.CODEDEPLOY_APPLICATION_DEPLOYMENT_GROUP_NAME}} --s3-location bucket=${{secrets.S3_PROD_CODEDEPLOY_BUCKET}},bundleType=zip,key=webapp.zip --region ${{env.AWS_REGION }} --output json)
 
           echo $output
 
