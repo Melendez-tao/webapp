@@ -1,0 +1,14 @@
+version: 0.0
+os: linux
+
+files:
+  - source: /
+    destination: /var/webapp
+
+hooks:
+
+  ApplicationStart:
+    - location: ./codedeploy/applicationStart.sh
+      timeout: 120
+      runas: ubuntu
+

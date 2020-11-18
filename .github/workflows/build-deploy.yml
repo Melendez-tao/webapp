@@ -1,0 +1,56 @@
+name: Build and Deploy WebApp
+
+env:
+  ARTIFACT_NAME: csye6225-webapp-${{github.run_number}}.zip
+  CODEDEPLOY_APPLICATION_NAME: csye6225-webapp
+  CODEDEPLOY_APPLICATION_DEPLOYMENT_GROUP_NAME: csye6225-webapp-deployment-group
+  AWS_REGION: us-east-1
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  ci_cd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.16.1'
+
+#      - name: Install dependencies
+#        run: |
+#          npm install
+#          ls
+
+      - name: Build Deployment Artifact
+        run: zip -r ../webapp.zip .
+
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: AKIAUQ6VGG3N25G24JMV
+          aws-secret-access-key: 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
+          aws-region: us-east-1
+
+      - name: Copy Artifact to S3
+        run: |
+          aws s3 cp ../webapp.zip s3://${{secrets.S3_PROD_CODEDEPLOY_BUCKET}}
+
+      - name: CodeDeploy API call
+        run: |
+          output=$(aws deploy create-deployment --application-name ${{env.CODEDEPLOY_APPLICATION_NAME}} --deployment-group-name ${{env.CODEDEPLOY_APPLICATION_DEPLOYMENT_GROUP_NAME}} --s3-location bucket=${{secrets.S3_PROD_CODEDEPLOY_BUCKET}},bundleType=zip,key=webapp.zip --region ${{env.AWS_REGION }} --output json)
+
+          echo $output
+
+          dId=$(echo $output | jq -r '.deploymentId')
+
+          aws deploy wait deployment-successful --deployment-id $dId
+
+
