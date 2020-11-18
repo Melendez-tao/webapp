@@ -22,10 +22,13 @@ const storage = multer.memoryStorage({
         callback(null, '')
     }
 })
+const prod_aws_id = "AKIAUQ6VGG3N25G24JMV";
+const prod_aws_secrets = "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";
+const bucket_name = "webapp.tao.wang1"
 const upload = multer({ storage }).array('image', 10)
 const s3 = new AWS.S3({
-        accessKeyId: process.env.PROD_AWS_ID,
-        secretAccessKey: process.env.PROD_AWS_SECRET
+        accessKeyId: prod_aws_id,
+        secretAccessKey: prod_aws_secrets
     })
     //post questions
 router.post('', async(req, res) => {
@@ -137,7 +140,7 @@ router.post('/:id/file',upload, async (req,res) => {
             const s3_object_name = uuid.v4() + file_name;
             console.log(s3_object_name)
             const params = {
-                Bucket: process.env.BUCKET_NAME,
+                Bucket: bucket_name,
                 Key: s3_object_name,
                 Body: fileArray[i].buffer
             }
@@ -199,7 +202,7 @@ router.delete('/:id/file/:fid', async(req, res) => {
     } else {
         const key = file.dataValues.s3_object_name;
         const params = {
-            Bucket: process.env.BUCKET_NAME,
+            Bucket: bucket_name,
             Key: key
         }
         let deleteTimer = metrics.createTimer('delete file from S3')
@@ -409,7 +412,7 @@ router.post('/:qid/answer/:aid/file', upload, async(req, res) => {
             let file_name = fileArray[i].originalname;
             const s3_object_name = uuid.v4() + file_name;
             const params = {
-                Bucket: process.env.BUCKET_NAME,
+                Bucket: bucket_name,
                 Key: s3_object_name,
                 Body: fileArray[i].buffer
             }
@@ -467,7 +470,7 @@ router.delete('/:qid/answer/:aid/file/:fid', async(req, res) => {
     }
     const key = file.dataValues.s3_object_name
     const params = {
-        Bucket: process.env.BUCKET_NAME,
+        Bucket: bucket_name,
         Key: key
     }
     let deleteS3Timer = metrics.createTimer('delete file from S3')
@@ -635,7 +638,9 @@ router.get('', async(req, res) => {
             const category_id = relation[i].dataValues.category_id;
             const category = await Category.findOne({ where: { category_id } })
             if (category)
-                relation[i] = category.dataValues;
+
+            relation[i] = category.dataValues;
+
         }
         question.dataValues.categories = relation;
         const answers = await Answer.findAll({ where: { question_id } })
