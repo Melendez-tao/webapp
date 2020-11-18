@@ -635,7 +635,9 @@ router.get('', async(req, res) => {
             const category_id = relation[i].dataValues.category_id;
             const category = await Category.findOne({ where: { category_id } })
             if (category)
-                relation[i] = category.dataValues;
+
+            relation[i] = category.dataValues;
+
         }
         question.dataValues.categories = relation;
         const answers = await Answer.findAll({ where: { question_id } })
