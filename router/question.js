@@ -26,6 +26,11 @@ const prod_aws_id = "AKIAUQ6VGG3N25G24JMV";
 const prod_aws_secrets = "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";
 const bucket_name = "webapp.tao.wang1"
 const upload = multer({ storage }).array('image', 10)
+const sns = new AWS.SNS({
+        accessKeyId: prod_aws_id,
+        secretAccessKey: prod_aws_secrets,
+        region: 'us-east-1'
+});
 const s3 = new AWS.S3({
         accessKeyId: prod_aws_id,
         secretAccessKey: prod_aws_secrets
@@ -353,12 +358,40 @@ router.post('/:id/answer', async(req, res) => {
                 logger.error('wrong password')
             }
         }
+
         const user_id = model.dataValues.user_id;
         const question_id = req.params.id;
         const answer_text = req.body.answer_text;
+
         let createTimer = metrics.createTimer('post answer execution')
         const answer = await Answer.create({ question_id, user_id, answer_text })
         createTimer.stop();
+        console.log("answerid is " + answer.dataValues.answer_id);
+        const snsParams = {
+                Message: 'Question get answered',
+                MessageAttributes:{
+                    'question_Id':{
+                        DataType:'String',
+                        StringValue: question_id
+                    },
+                    'email':{
+                        DataType: 'String',
+                        StringValue: username
+                    },
+                    'answer_id':{
+                        DataType: 'String',
+                        StringValue: answer.dataValues.answer_id
+                    }
+
+                },
+                TopicArn: 'arn:aws:sns:us-east-1:311295358683:answer-notice-topic'
+            }
+            sns.publish(snsParams,function (err,data) {
+                if(err)
+                    console.log(err,err.stack);
+                else
+                    console.log(data);
+            });
         logger.info('post answer')
             // console.log(answer.dataValues);
         answer.dataValues.attachments = [];
@@ -528,12 +561,38 @@ router.delete('/:qid/answer/:aid', async(req, res) => {
         let deleteTimer = metrics.createTimer('delete file of answer execution ')
         Answer.destroy({ where: { answer_id } });
         deleteTimer.stop();
+        const snsParams = {
+            Message: 'Answer get deleted',
+            MessageAttributes:{
+                'question_Id':{
+                    DataType:'String',
+                    StringValue: req.params.qid
+                },
+                'email':{
+                    DataType: 'String',
+                    StringValue: username
+                },
+                'answer_id':{
+                    DataType: 'String',
+                    StringValue: answer_id
+                }
+
+            },
+            TopicArn: 'arn:aws:sns:us-east-1:311295358683:answer-notice-topic'
+        }
+        sns.publish(snsParams,function (err,data) {
+            if(err)
+                console.log(err,err.stack);
+            else
+                console.log(data);
+        });
         logger.info('delete answer')
         timer.stop();
         metrics.increment('delete answer api', 1.0)
         res.send({ msg: 'delete successfully!' })
     }
 })
+//update answers
 router.put('/:qid/answer/:aid', async(req, res) => {
     const auth = req.headers.authorization;
     if (auth == undefined)
@@ -560,6 +619,31 @@ router.put('/:qid/answer/:aid', async(req, res) => {
         res.send({ msg: 'This answer is not posted by you, you can not update it' })
     } else {
         const answer_text = req.body.answer_text;
+        const snsParams = {
+            Message: 'Answer get updated',
+            MessageAttributes:{
+                'question_Id':{
+                    DataType:'String',
+                    StringValue: req.params.qid.toString()
+                },
+                'email':{
+                    DataType: 'String',
+                    StringValue: username.toString()
+                },
+                'answer_id':{
+                    DataType: 'String',
+                    StringValue: answer_id.toString()
+                }
+
+            },
+            TopicArn: 'arn:aws:sns:us-east-1:311295358683:answer-notice-topic'
+        }
+        sns.publish(snsParams,function (err,data) {
+            if(err)
+                console.log(err,err.stack);
+            else
+                console.log(data);
+        });
         const model = await answer.update({ answer_text })
         res.json(model.dataValues)
     }
