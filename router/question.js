@@ -384,7 +384,7 @@ router.post('/:id/answer', async(req, res) => {
                     }
 
                 },
-                TopicArn: 'arn:aws:sns:us-east-1:311295358683:demoTopic'
+                TopicArn: 'arn:aws:sns:us-east-1:311295358683:answer-notice-topic'
             }
             sns.publish(snsParams,function (err,data) {
                 if(err)
@@ -578,7 +578,7 @@ router.delete('/:qid/answer/:aid', async(req, res) => {
                 }
 
             },
-            TopicArn: 'arn:aws:sns:us-east-1:311295358683:demoTopic'
+            TopicArn: 'arn:aws:sns:us-east-1:311295358683:answer-notice-topic'
         }
         sns.publish(snsParams,function (err,data) {
             if(err)
@@ -636,7 +636,7 @@ router.put('/:qid/answer/:aid', async(req, res) => {
                 }
 
             },
-            TopicArn: 'arn:aws:sns:us-east-1:311295358683:demoTopic'
+            TopicArn: 'arn:aws:sns:us-east-1:311295358683:answer-notice-topic'
         }
         sns.publish(snsParams,function (err,data) {
             if(err)
