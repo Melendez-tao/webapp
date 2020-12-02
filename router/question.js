@@ -386,7 +386,6 @@ router.post('/:id/answer', async(req, res) => {
                         DataType: 'String',
                         StringValue: answer_text
                     }
-
                 },
                 TopicArn: 'arn:aws:sns:us-east-1:311295358683:answer-notice-topic'
             }
@@ -642,6 +641,7 @@ router.put('/:qid/answer/:aid', async(req, res) => {
                     DataType: 'String',
                     StringValue: answer_text
                 }
+                
             },
             TopicArn: 'arn:aws:sns:us-east-1:311295358683:answer-notice-topic'
         }
