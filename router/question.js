@@ -14,27 +14,28 @@ const lynx = require('lynx')
 const QAF = require('../database/model/RelationBetQAndFile')
 const AAF = require('../database/model/RelationBetAandFile')
 require('dotenv/config')
-var metrics = new lynx('localhost', 8125)
-    // const  bcrypt = require('bcryptjs')
+const metrics = new lynx('localhost', 8125)
 const router = express.Router();
 const storage = multer.memoryStorage({
     destination: function(req, file, callback) {
         callback(null, '')
     }
 })
+
 const prod_aws_id = "AKIAUQ6VGG3N25G24JMV";
 const prod_aws_secrets = "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";
 const bucket_name = "webapp.tao.wang1"
-const upload = multer({ storage }).array('image', 10)
+const upload = multer({ storage }).array('image', 10);
 const sns = new AWS.SNS({
-        accessKeyId: prod_aws_id,
-        secretAccessKey: prod_aws_secrets,
-        region: 'us-east-1'
+    accessKeyId: prod_aws_id,
+    secretAccessKey: prod_aws_secrets,
+    region: 'us-east-1',
 });
 const s3 = new AWS.S3({
-        accessKeyId: prod_aws_id,
-        secretAccessKey: prod_aws_secrets
-    })
+    accessKeyId: prod_aws_id,
+    secretAccessKey: prod_aws_secrets
+});
+
     //post questions
 router.post('', async(req, res) => {
         let timer = metrics.createTimer('post question api')
@@ -131,6 +132,7 @@ router.post('/:id/file',upload, async (req,res) => {
         const question = await Question.findOne({ where: { question_id } });
         if (!question) {
             logger.error('no such question!')
+            res.send({ msg: "no such question!" })
             res.send({ msg: "no such question!" })
         }
         if (user_id != question.dataValues.user_id) {
@@ -590,6 +592,7 @@ router.delete('/:qid/answer/:aid', async(req, res) => {
             else
                 console.log(data);
         });
+
         logger.info('delete answer')
         timer.stop();
         metrics.increment('delete answer api', 1.0)
@@ -619,10 +622,14 @@ router.put('/:qid/answer/:aid', async(req, res) => {
     const answer_id = req.params.aid;
     console.log(answer_id);
     const answer = await Answer.findOne({ where: { answer_id } });
+    console.log(user_id);
+    console.log(answer.dataValues.user_id);
+    console.log(user_id == answer.dataValues.user_id)
     if (user_id != answer.dataValues.user_id) {
         res.send({ msg: 'This answer is not posted by you, you can not update it' })
     } else {
         const answer_text = req.body.answer_text;
+        console.log(answer_text);
         const snsParams = {
             Message: 'Answer get updated',
             MessageAttributes:{
@@ -651,7 +658,7 @@ router.put('/:qid/answer/:aid', async(req, res) => {
             else
                 console.log(data);
         });
-        const model = await answer.update({ answer_text })
+        const model = await answer.update({answer_text})
         res.json(model.dataValues)
     }
 })
